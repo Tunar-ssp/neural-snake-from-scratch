@@ -19,10 +19,10 @@ class Food:
             x_cord.append(x)
             y_cord.append(y)
         while True:
-            self.Food_x=random.randint(0,SCREEN_WIDTH//CELL_PIXEL)
+            self.Food_x=random.randint(0,SCREEN_WIDTH//CELL_PIXEL-1)
             if self.Food_x not in x_cord:break
         while True:
-            self.Food_y=random.randint(0,SCREEN_HEIGHT//CELL_PIXEL)
+            self.Food_y=random.randint(0,SCREEN_HEIGHT//CELL_PIXEL-1)
             if self.Food_y not in y_cord:break
         return self.Food_x,self.Food_y
     

@@ -14,28 +14,33 @@ class Snake:
         self.cordinates=cordinates.copy()
         self.head_direction=head_direction.copy()
 
-    def Move_snake(self,state):
+    def Move_snake(self, state):
+        x, y = self.cordinates[-1]
         #up right down left
+        # Rotate direction
+        idx = self.head_direction.index(1)
+
+        if state == [0, 0, 1]:   
+            idx = (idx + 1) % 4
+        elif state == [1, 0, 0]: 
+            idx = (idx - 1) % 4
+        # [1, 0, 0] is straight  so idx stays the same
+
+     
+        self.head_direction = [0, 0, 0, 0]
+        self.head_direction[idx] = 1
+
         
+        if idx == 0: y -= 1    # Up
+        elif idx == 1: x += 1  # Right
+        elif idx == 2: y += 1  # Down
+        elif idx == 3: x -= 1  # Left
 
-        x,y=self.cordinates[-1]
+        self.cordinates.append([x, y])
+
+        self.cordinates.append([x, y])
+        return self.head_direction, self.cordinates
         
-   
-  
-
-        if state == [1,0,0]:head_direction=head_direction[1:]+head_direction[1]
-        elif state ==[0,0,1]:head_direction=head_direction[-1]+head_direction[:-1]
-        else: pass
-
-        if head_direction==[1,0,0,0]:y-=1
-        elif head_direction==[0,1,0,0]:x+=1
-        elif head_direction==[0,0,1,0]:y+=1
-        elif head_direction==[0,0,0,1]:x-=1
-        else:print('Direction Error')
-
-        self.cordinates.append((x,y))
-        return head_direction,self.cordinates
-    
 
 
 
