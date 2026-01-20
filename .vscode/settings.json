@@ -1,0 +1,19 @@
+{
+    "python-envs.pythonProjects": [],
+
+    "editor.inlineSuggest.enabled": false,
+
+
+    "github.copilot.inlineSuggest.enabled": false,
+
+
+    "github.copilot.editor.enableAutoCompletions": false,
+
+
+
+    "tabnine.inlineSuggestionsEnabled": false,
+
+
+    "aws.codeWhisperer.automaticTrigger.enabled": false,
+    "aws.codeWhisperer.includeSuggestionsWithCodeReferences": false
+}
