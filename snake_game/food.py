@@ -6,8 +6,9 @@ from .settings import CELL_PIXEL,SCREEN_WIDTH,SCREEN_HEIGHT
 
 
 class Food:
-    def __init__(self,screen,color=(0,255,0),radius=2.5,width=0):
-        self.screen=screen
+    def __init__(self,screen=None,color=(0,255,0),radius=2.5,width=0,Render=False):
+        if Render:
+            self.screen=screen
         self.Food_x=None
         self.Food_y=None
         self.color=color

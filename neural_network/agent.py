@@ -2,85 +2,116 @@ import numpy as np
 
 class Worker:
     def __init__(self, SCREEN_WIDTH, CELL_PIXEL, SCREEN_HEIGHT):
+        self.w = SCREEN_WIDTH
+        self.h = SCREEN_HEIGHT
+        self.cell_size = CELL_PIXEL
         self.max_x = SCREEN_WIDTH // CELL_PIXEL
         self.max_y = SCREEN_HEIGHT // CELL_PIXEL
 
     def Run(self, Food_cord, snake_cordinates, head_direction):
-        self.Food_cord = Food_cord
-        self.snake_cordinates = snake_cordinates
-        self.head_direction = head_direction
-
-        self.food_direction()
-        self.long_range_danger()
-        self.immediate_danger()
-        self.find_nearest_danger_distance()
-
-        # Combine all features into one flat array for the neural network
-        training_data = np.array(
-            self.head_direction +            # 4 values
-            self.food_direction_list +       # 4 values
-            self.long_range_danger_list +    # 4 values
-            self.immediate_danger_list +     # 4 values
-            [self.nearest_danger_distance]   # 1 value (must be in a list to concatenate)
-        ).astype(np.float32)
-
-        return training_data
-
-    def food_direction(self):
-        # HEAD IS AT [-1]
-        x_head, y_head = self.snake_cordinates[-1]
-        x_food, y_food = self.Food_cord
+        head = snake_cordinates[-1]
         
-        self.food_direction_list = [
-            int(y_food < y_head),  # food is Up
-            int(x_food > x_head),  # food is Right
-            int(y_food > y_head),  # food is Down
-            int(x_food < x_head),  # food is Left
+       
+        # Current Head Direction as Booleans
+        dir_u = head_direction[0] == 1
+        dir_r = head_direction[1] == 1
+        dir_d = head_direction[2] == 1
+        dir_l = head_direction[3] == 1
+
+        # Define the 8 directions to look (x, y)
+        # [Up, UpRight, Right, DownRight, Down, DownLeft, Left, UpLeft]
+        directions = [
+            [0, -1], [1, -1], [1, 0], [1, 1], 
+            [0, 1], [-1, 1], [-1, 0], [-1, -1]
         ]
 
-    def long_range_danger(self):
-        # HEAD IS AT [-1]
-        x_head, y_head = self.snake_cordinates[-1]
-        self.long_range_danger_list = [0, 0, 0, 0]
+       
+        # We look in 8 directions. For each, we get:
+        # A) Distance to Obstacle (Wall/Body) - Normalized (1 = Close, 0 = Far)
+        # B) Is Food in this direct line of sight? (1 = Yes, 0 = No)
         
-        # Check if body parts are in the same row/column as the head
-        # We slice  to avoid checking the head against itself
-        for x, y in self.snake_cordinates[:-1]:
-            if x == x_head and y < y_head:   self.long_range_danger_list[0] = 1 # Danger Up
-            elif y == y_head and x > x_head: self.long_range_danger_list[1] = 1 # Danger Right
-            elif x == x_head and y > y_head: self.long_range_danger_list[2] = 1 # Danger Down
-            elif y == y_head and x < x_head: self.long_range_danger_list[3] = 1 # Danger Left
-
-    def immediate_danger(self):
+        vision_inputs = []
         
-        x_head, y_head = self.snake_cordinates[-1]
-        self.immediate_danger_list = [0, 0, 0, 0]
+        for d in directions:
+            # Raycast function
+            res = self.cast_ray(head, d, snake_cordinates, Food_cord)
+            vision_inputs.extend(res) # Adds 2 values per direction
 
-        # Wall Checks
-        if y_head - 1 < 0: self.immediate_danger_list[0] = 1
-        if x_head + 1 >= self.max_x: self.immediate_danger_list[1] = 1
-        if y_head + 1 >= self.max_y: self.immediate_danger_list[2] = 1
-        if x_head - 1 < 0: self.immediate_danger_list[3] = 1
-
-        #Body Checks (Immediate neighbor)
-        for x, y in self.snake_cordinates[:-1]:
-            if x == x_head and y == y_head - 1: self.immediate_danger_list[0] = 1
-            if x == x_head + 1 and y == y_head: self.immediate_danger_list[1] = 1
-            if x == x_head and y == y_head + 1: self.immediate_danger_list[2] = 1
-            if x == x_head - 1 and y == y_head: self.immediate_danger_list[3] = 1
-
-    def find_nearest_danger_distance(self):
       
-        x_head, y_head = self.snake_cordinates[-1]
+        # Standard inputs to help fast reaction
         
-        # Distance to the 4 walls
-        dists = [
-            y_head,                # distance to top
-            self.max_x - x_head - 1, # distance to right
-            self.max_y - y_head - 1, # distance to bottom
-            x_head                 # distance to left
+        point_l = [head[0] - 1, head[1]]
+        point_r = [head[0] + 1, head[1]]
+        point_u = [head[0], head[1] - 1]
+        point_d = [head[0], head[1] + 1]
+
+        basic_inputs = [
+            # Danger relative to head (3)
+            (dir_r and self.is_collision(point_r, snake_cordinates)) or 
+            (dir_l and self.is_collision(point_l, snake_cordinates)) or 
+            (dir_u and self.is_collision(point_u, snake_cordinates)) or 
+            (dir_d and self.is_collision(point_d, snake_cordinates)),
+
+            (dir_u and self.is_collision(point_r, snake_cordinates)) or 
+            (dir_d and self.is_collision(point_l, snake_cordinates)) or 
+            (dir_l and self.is_collision(point_u, snake_cordinates)) or 
+            (dir_r and self.is_collision(point_d, snake_cordinates)),
+
+            (dir_d and self.is_collision(point_r, snake_cordinates)) or 
+            (dir_u and self.is_collision(point_l, snake_cordinates)) or 
+            (dir_r and self.is_collision(point_u, snake_cordinates)) or 
+            (dir_l and self.is_collision(point_d, snake_cordinates)),
+
+            # Move Direction (4)
+            dir_l, dir_r, dir_u, dir_d,
+
+            # General Food Direction (4)
+            Food_cord[0] < head[0],  # Left
+            Food_cord[0] > head[0],  # Right
+            Food_cord[1] < head[1],  # Up
+            Food_cord[1] > head[1]   # Down
         ]
+
+        # Combine Vision (16) + Basic (11) = 27 Inputs
+        final_state = vision_inputs + basic_inputs
         
-        # Normalize: find the closest wall and scale 0.0 to 1.0
-        min_dist = min(dists)
-        self.nearest_danger_distance = np.float32(min_dist) / max(self.max_x, self.max_y)
+        # Convert True/False to 1/0 and return float32 array
+        return np.array(final_state, dtype=int).astype(np.float32)
+
+    def cast_ray(self, head, direction, snake_body, food):
+        x, y = head
+        dx, dy = direction
+        
+        distance = 0
+        found_food = 0
+        distance_to_danger = 0
+        
+        # Loop until we hit a wall or body
+        while True:
+            x += dx
+            y += dy
+            distance += 1
+            
+            # 1. Check Wall
+            if x < 0 or x >= self.max_x or y < 0 or y >= self.max_y:
+                distance_to_danger = 1.0 / distance # closer = hhigher number (1.0)
+                break
+            
+            # 2. Check Body
+            if [x, y] in snake_body[:-1]:
+                distance_to_danger = 1.0 / distance
+                break
+            
+            # 3. Check Food
+            if x == food[0] and y == food[1]:
+                found_food = 1
+        
+        return [distance_to_danger, found_food]
+
+    def is_collision(self, point, snake_cordinates):
+        x, y = point
+        if x < 0 or x >= self.max_x or y < 0 or y >= self.max_y:
+            return True
+        if point in snake_cordinates[:-1]:
+            return True
+        return False

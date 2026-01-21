@@ -2,8 +2,9 @@ import pygame
 from .settings import CELL_PIXEL 
 
 class Snake:
-    def __init__(self, screen, cordinates, head_direction):
-        self.screen = screen
+    def __init__(self, screen, cordinates, head_direction,render=False):
+        if render:
+            self.screen = screen
         self.cordinates = cordinates
         self.head_direction = head_direction
 

@@ -2,7 +2,7 @@ from .settings import CELL_PIXEL, SCREEN_HEIGHT, SCREEN_WIDTH
 import pygame
 
 class GameOverCheck:
-    def __init__(self, screen):
+    def __init__(self):
         self.max_x = SCREEN_WIDTH // CELL_PIXEL
         self.max_y = SCREEN_HEIGHT // CELL_PIXEL
 
