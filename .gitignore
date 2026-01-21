@@ -10,3 +10,4 @@ stats.py
 models/
 *.npz
 *.csv
+problems.md

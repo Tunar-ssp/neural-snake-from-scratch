@@ -73,23 +73,23 @@ class model:
             m = self.training_data.shape[0]
             
             # Output Layer (Layer 3)
-            dZ3 = loss # (1, 3)
-            self.dzW3 = (1/m) * (self.A2.T @ dZ3)
-            self.dzb3 = (1/m) * np.sum(dZ3, axis=0, keepdims=True)
+            dZ3 = loss # (Batch, 3)
+            self.dzW3 = (self.A2.T @ dZ3)
+            self.dzb3 = np.sum(dZ3, axis=0, keepdims=True)
 
             # Hidden Layer 2
             dA2 = dZ3 @ self.W3.T
-            # Derivative of ReLU  1 if Z > 0, else 0
-            dZ2 = dA2 * np.where(self.Z2 > 0,1,0.01) 
-            self.dzW2 = (1/m) * (self.A1.T @ dZ2)
-            self.dzb2 = (1/m) * np.sum(dZ2, axis=0, keepdims=True)
+            # Derivative of ReLU 
+            dZ2 = dA2 * np.where(self.Z2 > 0, 1, 0) 
+            self.dzW2 = (self.A1.T @ dZ2)
+            self.dzb2 = np.sum(dZ2, axis=0, keepdims=True)
 
             # Hidden Layer 1
             dA1 = dZ2 @ self.W2.T
             # Derivative of ReLU
-            dZ1 = dA1 * np.where(self.Z1 > 0,1,0.01) 
-            self.dzW1 = (1/m) * (self.training_data.T @ dZ1)
-            self.dzb1 = (1/m) * np.sum(dZ1, axis=0, keepdims=True)
+            dZ1 = dA1 * np.where(self.Z1 > 0, 1, 0) 
+            self.dzW1 = (self.training_data.T @ dZ1)
+            self.dzb1 = np.sum(dZ1, axis=0, keepdims=True)
 
     def backward_propagation(self,learning_rate):
         self.W1-=self.dzW1*learning_rate

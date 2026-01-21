@@ -58,8 +58,7 @@ class LivePlotter:
 
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
-
-
+        plt.pause(0.01)
 def save_stats_to_csv(game_count, number_of_moves, score_per_round, total_reward_per_round):
     rows = zip(range(1, game_count + 1), number_of_moves, score_per_round, total_reward_per_round)
     with open('stats.csv', 'w', newline='') as f:

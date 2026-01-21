@@ -1,201 +1,158 @@
-from snake_game import SnakeGame
-from neural_network import WorkerAgent,MlModel
-from snake_game import settings
-import numpy as np
-import csv
-import plot_save
-Game_settings = (settings.SCREEN_WIDTH,settings.CELL_PIXEL,settings.SCREEN_HEIGHT)
-import time
 import random
-
-
+from collections import deque
+import numpy as np
+from snake_game import SnakeGame
+from neural_network import WorkerAgent, MlModel
+from snake_game import settings
+import plot_save
 
 def main():
-    game=SnakeGame(Render=False)
+    game = SnakeGame(Render=False)
     plotter = plot_save.LivePlotter()
     
-    CreateData=WorkerAgent(*Game_settings)
-    TrainModel=MlModel(input_size=27, hidden1=256, hidden2=64, output_size=3)
+    Game_settings = (settings.SCREEN_WIDTH, settings.CELL_PIXEL, settings.SCREEN_HEIGHT)
+    CreateData = WorkerAgent(*Game_settings)
+    TrainModel = MlModel(input_size=35, hidden1=256, hidden2=128, output_size=3)
     
-    learning_rate=0.00005
-    gamma=0.9
+    learning_rate = 0.001  
+    gamma = 0.9            
+    epsilon = 1.0
+    epsilon_min = 0.1    
+    epsilon_decay = 0.995
 
-
-    epsilon=1.0 # 100% random moves at start
-    epsilon_min=0.01
-    epsilon_decay=0.998
-
-
-
-    game_count=1
-    moves=0
-    max_score=0
-    number_of_moves=[]
-
-    score_per_round=[]
-
-    Food_cord = (game.Food_x, game.Food_y)
-    snake_cordinates = game.snake_cordinates
-    head_direction = game.head_direction
-    score = game.score
+    memory = deque(maxlen=100000) 
+    BATCH_SIZE = 128
+    moves = 0
+    max_score = 0
+    game_count = 0
     
-    
-    total_reward_per_round=[]
-    total_reward_per_round_temp=[]
-
+    number_of_moves = []
+    score_per_round = []
+    total_reward_per_round = []
+    total_reward_per_round_temp = []
     loss_per_game_temp = [] 
     avg_loss_history = []
-    
     epsilon_history = []
     q_values_per_episode = []
     q_values_current_episode = []
+
     try:
         while True:
-            Training_data=CreateData.Run(Food_cord,snake_cordinates,head_direction)
-            #print(f'Training data:{Training_data}')#
-            prediction_current = TrainModel.forward_propagation(Training_data)
-            #print(f'prediction_current:{prediction_current}')
+        
+            Food_cord = (game.Food_x, game.Food_y)
+            snake_cordinates = game.snake_cordinates
+            head_direction = game.head_direction
+            
+            state_old = CreateData.Run(Food_cord, snake_cordinates, head_direction)
+            
+            prediction_current = TrainModel.forward_propagation(state_old)
+            
             if random.random() <= epsilon:
                 action_idx = random.randint(0, 2)  
             else:
-
                 action_idx = np.argmax(prediction_current)
-            
-            
-            
-            # time.sleep(0.01)
-            
             
             state_action = [0, 0, 0]
             state_action[action_idx] = 1
             
-            Food_cord,snake_cordinates,head_direction,game_over,score,reward=game.run_game(state_action)
             
-            # print(
-            # f"Food__cord      = {Food_cord}\n"
-            # f"Snake_cordinates= {snake_cordinates}\n"
-            # f"Head_direction  = {head_direction}\n"
-            # f"Game_over       = {game_over}\n"
-            # f"Score           = {score}\n"
-            # f"Reward          = {reward}\n"
-            # f"Epsilon          = {epsilon}"
             
-            # )
-                
-            # game.render()
-
-            training_data_next = CreateData.Run(Food_cord, snake_cordinates, head_direction)
-            prediction_next = TrainModel.forward_propagation(training_data_next)
+            Food_cord_next, snake_cordinates_next, head_direction_next, game_over, score, reward = game.run_game(state_action)
             
-            target_f = prediction_current.copy()
+        
+
+            state_new = CreateData.Run(Food_cord_next, snake_cordinates_next, head_direction_next)
+ 
+ 
+            memory.append((state_old, action_idx, reward, state_new, game_over))
+      
+    
             
-            Q_new = reward
-            if not game_over:
-                Q_new=TrainModel.calculate_Q_target(reward,prediction_next,gamma)
-
-
-
-
-
+            
+            if len(memory) > BATCH_SIZE and (game_over or moves % 15 == 0):
+                batch_loss = []
+                for _ in range(10):  
+                    mini_batch = random.sample(memory, BATCH_SIZE)
+                    states = np.array([m[0] for m in mini_batch]).reshape(BATCH_SIZE, -1)
+                    next_states = np.array([m[3] for m in mini_batch]).reshape(BATCH_SIZE, -1)
+                    actions = np.array([m[1] for m in mini_batch])
+                    rewards = np.array([m[2] for m in mini_batch])
+                    dones = np.array([m[4] for m in mini_batch])
+                    # Get predictions for next states to calculate targets
+                    next_preds = TrainModel.forward_propagation(next_states)
            
-            
-            target_f[0][action_idx] = Q_new
-            loss_gradient = prediction_current - target_f
-            loss_gradient = np.clip(loss_gradient, -1.0, 1.0)
+                    # Fully Vectorized Bellman Equation
+                    max_next_q = np.max(next_preds, axis=1)
+                    target_q_values = rewards + (gamma * max_next_q * (1 - dones))
 
-            current_mse = np.mean(np.square(loss_gradient))
-            loss_per_game_temp.append(current_mse)
+                    # NOW get predictions for current states and store activations for backprop
+                    preds = TrainModel.forward_propagation(states)
+                    targets = preds.copy()
+            
+
+                    targets[np.arange(BATCH_SIZE), actions] = target_q_values
+
+                    # Compute gradient and backprop
+                    loss_grad = preds - targets
+                    loss_grad = np.clip(loss_grad, -1.0, 1.0)
+              
+                    TrainModel.gradient_descent(loss_grad)
+                    TrainModel.backward_propagation(learning_rate)
+          
+                    batch_loss.append(np.mean(np.square(loss_grad)))
+
+                loss_per_game_temp.append(np.mean(batch_loss))
+
+
             total_reward_per_round_temp.append(reward)
             q_values_current_episode.append(np.mean(prediction_current))
+            moves += 1
 
-
-
-
-
-
-
-            TrainModel.gradient_descent(loss_gradient)
-            TrainModel.backward_propagation(learning_rate)
-
-            
-
-
-
-
-
-
-            moves+=1
-            if game_over==True:
+            if game_over:
                 if score > max_score:
                     max_score = score
-                    TrainModel.save_model(f"model_best_{max_score}.npz")
+                    TrainModel.save_model(f"models/model_best_{max_score}.npz")
 
                 score_per_round.append(score)
                 total_reward_per_round.append(sum(total_reward_per_round_temp))
                 number_of_moves.append(moves)
                 
-                avg_loss_history.append(np.mean(loss_per_game_temp))
+                if len(loss_per_game_temp) > 0:
+                    avg_loss_history.append(np.mean(loss_per_game_temp))
+                else:
+                    avg_loss_history.append(0)
+                    
                 epsilon_history.append(epsilon)
                 
-                # Calculate average Q-values for this episode
                 if len(q_values_current_episode) > 0:
                     avg_q_val = np.mean(q_values_current_episode)
                     q_values_per_episode.append(avg_q_val)
                 else:
                     q_values_per_episode.append(0)
-                
-                plotter.update(score_per_round, number_of_moves, avg_loss_history, 
-                              epsilon_history, total_reward_per_round, q_values_per_episode)
+                if game_count % 50 == 0:
 
-                total_reward_per_round_temp=[]
+                    plotter.update(score_per_round, number_of_moves, avg_loss_history, 
+                                epsilon_history, total_reward_per_round, q_values_per_episode)
+
+     
+                total_reward_per_round_temp = []
                 loss_per_game_temp = []
                 q_values_current_episode = []
-                moves=0
-                game_count+=1
+                moves = 0
+                game_count += 1
+                
                 if epsilon > epsilon_min:
                     epsilon *= epsilon_decay
-            # if game_count >600:
-            #     time.sleep(0.05)
-            #     game.render()
-            
-                
-                
-            
-
-
+                print("------------------")
+                print(f"Game: {game_count}, Score: {score}, Max Score: {max_score}, Epsilon: {epsilon:.4f}")
 
     except KeyboardInterrupt:
         print('-----------Training Stopped by Keyboard Interrupt -----------')
     finally:
         print("Saving final model and stats...")
         TrainModel.save_model("models/model_final.npz")
-        
-        plot_save.save_stats_to_csv(game_count,number_of_moves,score_per_round, total_reward_per_round)
+        plot_save.save_stats_to_csv(game_count, number_of_moves, score_per_round, total_reward_per_round)
         print("Done. Safe to close.")
 
-
-
-        
-
-
-        
-
-
-        
-
-        
-
-
-
-
-        
-
-        
-    
-        
-        
-
-    
-
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

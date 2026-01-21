@@ -71,15 +71,15 @@ class Game:
 
     def calculate_reward(self):
         if self.game_over:
-            self.reward = -10
+            self.reward = -20
             return
         if self.eaten:
-            self.reward = 15
+            self.reward = 20
             return
         
         x_head, y_head = self.snake_cordinates[-1]
         dist = (self.Food_x - x_head)**2 + (self.Food_y - y_head)**2
-        self.reward = 0.1 if dist < self.last_food_distance else -0.2
+        self.reward = 0.1 if dist < self.last_food_distance else -0.1
         self.last_food_distance = dist
 
     def render(self):
