@@ -3,6 +3,7 @@ import numpy as np
 
 
 
+
 class model:
     def __init__(self, input_size=17, hidden1=256, hidden2=64, output_size=3):
         
@@ -12,32 +13,41 @@ class model:
         self.W1=np.random.randn(input_size,hidden1)*0.01
         self.b1=np.zeros(hidden1)
         
-        self.W1=np.random.randn(hidden1,hidden2)*0.01
-        self.b1=np.zeros(hidden2)
+        self.W2=np.random.randn(hidden1,hidden2)*0.01
+        self.b2=np.zeros(hidden2)
         
-        self.W1=np.random.randn(hidden2,output_size)*0.01
-        self.b1=np.zeros(output_size)
+        self.W3=np.random.randn(hidden2,output_size)*0.01
+        self.b3=np.zeros(output_size)
 
 
 
-    def Run(self,training_data):
+    # def Run(self,training_data):
         
-        self.training_data=training_data
-        self.forward_propagation()
-        self.gradient_descent()
-        self.backward_propagation()
+        # self.training_data=training_data
+        #predict_curent
+        # self.forward_propagation()
+        # #action  neural_network/agent.py
+        # #get reward
+        # #predict_curent 
+
+        # self.calculate_Q_target(self.reward,self.Q_nextstate) # this won't be there
+        # self.backward_propagation()
+        # self.gradient_descent() 
 
 
 
     def ReLU(self,z):
         return np.maximum(0,z)
+    def calculate_Q_target(self,reward,Q_nextstate,gamma=0.9):
+        return reward+gamma* np.max(Q_nextstate)
+        
 
-    def Loss_Function(self):
-        pass
 
         
-    def forward_propagation(self):
+
         
+    def forward_propagation(self,training_data):
+        self.training_data=training_data
         # (1,17) (17,256)
         self.Z1=self.training_data@self.W1+self.b1
         self.A1=self.ReLU(self.Z1)
@@ -46,13 +56,34 @@ class model:
         self.A2=self.ReLU(self.Z2)
         # (256,64) (64,3)
         self.Z3=self.A2@self.W3+self.b3
-        self.A3=self.ReLU(self.Z3)
-       
+        self.A3=self.Z3
+
+        
+
+        return self.A3
 
 
         
-    def gradient_descent():
-        pass
+    def gradient_descent(self,loss):
+        
+        m=self.training_data.shape[0]
+        
+        dZ3=loss
+        
+        self.dzW1=(1/m)*(self.A2.T @ dZ3)
+        self.dzb1=(1/m)*(np.sum(dZ3,axis=0,keepdims=True))
+
+        dA2=dA2@self.W3.T
+        dZ2=dA2*self.ReLU(self.Z2)
+
+        self.dzW2=(1/m)*(self.A1.T @ dZ2)
+        self.dzb2=(1/m)*(np.sum(dZ2,axis=0,keepdims=True))
+
+        dA1=dA1@self.W2.T
+        dZ1=dA1*self.ReLU(self.Z2) 
+        self.dzW3=(1/m)*(self.training_data @ dZ1)
+        self.dzb3=(1/m)*(np.sum(dZ1,axis=0,keepdims=True))
+
     def backward_propagation(self,learning_rate):
         self.W1-=self.dzW1*learning_rate
         self.b1-=self.dzb1*learning_rate
