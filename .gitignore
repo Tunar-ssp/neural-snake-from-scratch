@@ -5,3 +5,8 @@
 notes.md
 test.py
 test1.py
+
+stats.py
+models/
+*.npz
+*.csv

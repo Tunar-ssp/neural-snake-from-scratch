@@ -5,7 +5,7 @@ from .snake import Snake
 from .food  import Food
 from .gave_over import GameOverCheck
 import random
-import time
+
 
 class Game:
     def __init__(self):
@@ -35,13 +35,13 @@ class Game:
     def run_game(self, state):
         self.eaten = False
         self.game_over = False
-        time.sleep(0.05)
+        
         
         self.head_direction, self.snake_cordinates = self.snake.Move_snake(state)
         
         if self.Check_GameOver.check_border_collision(self.snake_cordinates) or \
            self.Check_GameOver.check_snake_collision(self.snake_cordinates) or \
-           self.frame_iteration >= 100 * (self.score + 1):
+           self.frame_iteration >= 100 * (self.score + 2):
             self.game_over = True
             self.calculate_reward()
             res = (self.Food_x, self.Food_y), self.snake_cordinates, self.head_direction, True, self.score, self.reward
@@ -63,15 +63,15 @@ class Game:
 
     def calculate_reward(self):
         if self.game_over:
-            self.reward = -10
+            self.reward = -30
             return
         if self.eaten:
-            self.reward = 10
+            self.reward = 20
             return
         
         x_head, y_head = self.snake_cordinates[-1]
         dist = (self.Food_x - x_head)**2 + (self.Food_y - y_head)**2
-        self.reward = 0.1 if dist < self.last_food_distance else -0.2
+        self.reward = 0.5 if dist < self.last_food_distance else -1.5
         self.last_food_distance = dist
 
     def render(self):

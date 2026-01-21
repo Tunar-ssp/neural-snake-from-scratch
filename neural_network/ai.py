@@ -47,7 +47,12 @@ class model:
 
         
     def forward_propagation(self,training_data):
-        self.training_data=training_data
+
+        if training_data.ndim == 1:
+            self.training_data = training_data.reshape(1, -1)
+        else:
+             self.training_data = training_data
+    
         # (1,17) (17,256)
         self.Z1=self.training_data@self.W1+self.b1
         self.A1=self.ReLU(self.Z1)
@@ -64,37 +69,57 @@ class model:
 
 
         
-    def gradient_descent(self,loss):
-        
-        m=self.training_data.shape[0]
-        
-        dZ3=loss
-        
-        self.dzW1=(1/m)*(self.A2.T @ dZ3)
-        self.dzb1=(1/m)*(np.sum(dZ3,axis=0,keepdims=True))
+    def gradient_descent(self, loss):
+            m = self.training_data.shape[0]
+            
+            # Output Layer (Layer 3)
+            dZ3 = loss # (1, 3)
+            self.dzW3 = (1/m) * (self.A2.T @ dZ3)
+            self.dzb3 = (1/m) * np.sum(dZ3, axis=0, keepdims=True)
 
-        dA2=dA2@self.W3.T
-        dZ2=dA2*self.ReLU(self.Z2)
+            # Hidden Layer 2
+            dA2 = dZ3 @ self.W3.T
+            # Derivative of ReLU  1 if Z > 0, else 0
+            dZ2 = dA2 * np.where(self.Z2 > 0,1,0.01) 
+            self.dzW2 = (1/m) * (self.A1.T @ dZ2)
+            self.dzb2 = (1/m) * np.sum(dZ2, axis=0, keepdims=True)
 
-        self.dzW2=(1/m)*(self.A1.T @ dZ2)
-        self.dzb2=(1/m)*(np.sum(dZ2,axis=0,keepdims=True))
-
-        dA1=dA1@self.W2.T
-        dZ1=dA1*self.ReLU(self.Z2) 
-        self.dzW3=(1/m)*(self.training_data @ dZ1)
-        self.dzb3=(1/m)*(np.sum(dZ1,axis=0,keepdims=True))
+            # Hidden Layer 1
+            dA1 = dZ2 @ self.W2.T
+            # Derivative of ReLU
+            dZ1 = dA1 * np.where(self.Z1 > 0,1,0.01) 
+            self.dzW1 = (1/m) * (self.training_data.T @ dZ1)
+            self.dzb1 = (1/m) * np.sum(dZ1, axis=0, keepdims=True)
 
     def backward_propagation(self,learning_rate):
         self.W1-=self.dzW1*learning_rate
+        self.dzb1=self.dzb1.squeeze() 
         self.b1-=self.dzb1*learning_rate
 
         self.W2-=self.dzW2*learning_rate
+        self.dzb2=self.dzb2.squeeze()
         self.b2-=self.dzb2*learning_rate
         
         self.W3-=self.dzW3*learning_rate
+        self.dzb3=self.dzb3.squeeze()
         self.b3-=self.dzb3*learning_rate
 
-        
+    def save_model(self, file_name="models/model.npz"):
+        np.savez(file_name, 
+                W1=self.W1, b1=self.b1, 
+                W2=self.W2, b2=self.b2, 
+                W3=self.W3, b3=self.b3)
+        print(f"Model saved to {file_name}")
+
+    def load_model(self, file_name="models/model.npz"):
+        data = np.load(file_name)
+        self.W1 = data['W1']
+        self.b1 = data['b1']
+        self.W2 = data['W2']
+        self.b2 = data['b2']
+        self.W3 = data['W3']
+        self.b3 = data['b3']
+        print(f"Model loaded from {file_name}")        
 
 
 
