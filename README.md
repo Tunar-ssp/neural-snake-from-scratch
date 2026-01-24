@@ -18,7 +18,7 @@ The AI plays by eating food and not dying. That's it.
 
 ---
 
-## 📊 Project Structure
+## Project Structure
 
 ```
 neural-snake-from-scratch/
@@ -46,7 +46,7 @@ neural-snake-from-scratch/
 
 ---
 
-## 🧠 How It Works
+## How It Works
 
 ### 1. **The Neural Network** (`ai.py`)
 - **Architecture**: 3-layer fully connected network
@@ -60,7 +60,7 @@ neural-snake-from-scratch/
 - **Optimization**: Gradient descent with L2 regularization
 
 
-### 2. **Training Loop** (`main.py`)
+### **Training Loop** (`main.py`)
 
 ```
 For each game:
@@ -78,7 +78,7 @@ For each game:
 
 **Epsilon Decay**: Starts at 1.0 (explore randomly), decays to 0.05 (mostly exploit). This ensures the AI explores early, then trusts its learning.
 
-### 3. **Reward System** (`game.py`) 
+### **Reward System** (`game.py`) 
 I have changed these settings bilion times for getting better results (these are not good actually)
 ```python
 game_over:        -10  (hitting wall or self = bad)
@@ -90,7 +90,7 @@ away_from_food:   -0.5 (moving away from food = small penalty)
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 ```bash
@@ -129,7 +129,7 @@ Select models to test, then choose how many games to run and whether to render v
 
 ---
 
-## 📊 Performance Metrics
+## Performance Metrics
 
 When training, the system tracks:
 
@@ -144,7 +144,7 @@ These are plotted live in a 2×3 subplot grid.
 ![yeap](images/train.png)
 ---
 
-## 🎮 Game Rules
+## Game Rules
 
 - **Movement**: Up, Down, Left, Right 
 - **Win Condition**: There isn't one—higher scores are better
@@ -153,7 +153,7 @@ These are plotted live in a 2×3 subplot grid.
 ---
 
 
-## 🐛 Known Issues & Quirks
+##  Known Issues & Quirks
 
 **Grid-based state representation is inefficient**: The `StateBuilder` class creates grid states, but a standard MLP doesn't understand spatial structure well. Solution: Use `WorkerAgentVision` instead (which is what `main.py` does now).
 
