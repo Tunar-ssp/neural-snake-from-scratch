@@ -11,3 +11,5 @@ models/
 *.npz
 *.csv
 problems.md
+hyperparameter_tuning.py
+test_results.png

@@ -2,26 +2,55 @@ import random
 from collections import deque
 import numpy as np
 from snake_game import SnakeGame
-from neural_network import WorkerAgent, MlModel
+from neural_network import WorkerAgent, MlModel,WorkerAgentMatrix ,WorkerAgentVision
 from snake_game import settings
 import plot_save
 
+
+
+REWARDS = {
+    'game_over': -10,    
+    'food_eaten': 10,      
+    'trapped': -10,        
+    'closer_to_food': 0.5, 
+    'away_from_food': -0.5 
+}
+
 def main():
     game = SnakeGame(Render=False)
+    # Set rewards in game
+    game.REWARDS = REWARDS
     plotter = plot_save.LivePlotter()
+    fineTune=False
     
     Game_settings = (settings.SCREEN_WIDTH, settings.CELL_PIXEL, settings.SCREEN_HEIGHT)
-    CreateData = WorkerAgent(*Game_settings)
-    TrainModel = MlModel(input_size=35, hidden1=256, hidden2=128, output_size=3)
+    CreateData =WorkerAgentVision(settings.max_x,settings.max_y)
     
-    learning_rate = 0.001  
-    gamma = 0.9            
-    epsilon = 1.0
-    epsilon_min = 0.1    
-    epsilon_decay = 0.995
+    
+    TrainModel = MlModel(input_size=43, hidden1=256, hidden2=128, output_size=3)
 
-    memory = deque(maxlen=100000) 
-    BATCH_SIZE = 128
+
+    
+    if fineTune:
+        TrainModel.load_model("models/model_Final.npz")
+        learning_rate = 0.00001
+        gamma = 0.99
+        epsilon = 0.15
+        epsilon_min = 0.01   
+        epsilon_decay = 0.9992
+        BATCH_SIZE = 128
+
+    else:
+
+        learning_rate = 0.00005
+        gamma = 0.99
+        epsilon = 1.0
+        epsilon_min = 0.05   
+        epsilon_decay = 0.9995
+        BATCH_SIZE = 128
+
+    memory = deque(maxlen=150000) 
+    
     moves = 0
     max_score = 0
     game_count = 0
@@ -43,7 +72,7 @@ def main():
             snake_cordinates = game.snake_cordinates
             head_direction = game.head_direction
             
-            state_old = CreateData.Run(Food_cord, snake_cordinates, head_direction)
+            state_old = CreateData.Run(Food_cord, snake_cordinates,head_direction)
             
             prediction_current = TrainModel.forward_propagation(state_old)
             
@@ -61,12 +90,12 @@ def main():
             
         
 
-            state_new = CreateData.Run(Food_cord_next, snake_cordinates_next, head_direction_next)
+            state_new = CreateData.Run(Food_cord_next, snake_cordinates_next,head_direction)
  
  
             memory.append((state_old, action_idx, reward, state_new, game_over))
       
-    
+
             
             
             if len(memory) > BATCH_SIZE and (game_over or moves % 15 == 0):
@@ -78,21 +107,19 @@ def main():
                     actions = np.array([m[1] for m in mini_batch])
                     rewards = np.array([m[2] for m in mini_batch])
                     dones = np.array([m[4] for m in mini_batch])
-                    # Get predictions for next states to calculate targets
                     next_preds = TrainModel.forward_propagation(next_states)
            
-                    # Fully Vectorized Bellman Equation
+     
                     max_next_q = np.max(next_preds, axis=1)
                     target_q_values = rewards + (gamma * max_next_q * (1 - dones))
 
-                    # NOW get predictions for current states and store activations for backprop
                     preds = TrainModel.forward_propagation(states)
                     targets = preds.copy()
             
 
                     targets[np.arange(BATCH_SIZE), actions] = target_q_values
 
-                    # Compute gradient and backprop
+
                     loss_grad = preds - targets
                     loss_grad = np.clip(loss_grad, -1.0, 1.0)
               
@@ -129,7 +156,7 @@ def main():
                     q_values_per_episode.append(avg_q_val)
                 else:
                     q_values_per_episode.append(0)
-                if game_count % 50 == 0:
+                if game_count % 200 == 0:
 
                     plotter.update(score_per_round, number_of_moves, avg_loss_history, 
                                 epsilon_history, total_reward_per_round, q_values_per_episode)

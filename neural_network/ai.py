@@ -19,32 +19,11 @@ class model:
         self.W3=np.random.randn(hidden2,output_size)*0.01
         self.b3=np.zeros(output_size)
 
-
-
-    # def Run(self,training_data):
-        
-        # self.training_data=training_data
-        #predict_curent
-        # self.forward_propagation()
-        # #action  neural_network/agent.py
-        # #get reward
-        # #predict_curent 
-
-        # self.calculate_Q_target(self.reward,self.Q_nextstate) # this won't be there
-        # self.backward_propagation()
-        # self.gradient_descent() 
-
-
-
     def ReLU(self,z):
         return np.maximum(0,z)
+    
     def calculate_Q_target(self,reward,Q_nextstate,gamma=0.9):
         return reward+gamma* np.max(Q_nextstate)
-        
-
-
-        
-
         
     def forward_propagation(self,training_data):
 
@@ -53,13 +32,13 @@ class model:
         else:
              self.training_data = training_data
     
-        # (1,17) (17,256)
+        
         self.Z1=self.training_data@self.W1+self.b1
         self.A1=self.ReLU(self.Z1)
-        # (17,256) (256,64)
+        
         self.Z2=self.A1@self.W2+self.b2
         self.A2=self.ReLU(self.Z2)
-        # (256,64) (64,3)
+    
         self.Z3=self.A2@self.W3+self.b3
         self.A3=self.Z3
 
@@ -69,27 +48,35 @@ class model:
 
 
         
-    def gradient_descent(self, loss):
+    def gradient_descent(self, loss, l2_reg=0.001):
             m = self.training_data.shape[0]
             
             # Output Layer (Layer 3)
             dZ3 = loss # (Batch, 3)
-            self.dzW3 = (self.A2.T @ dZ3)
+            self.dzW3 = (self.A2.T @ dZ3) + l2_reg * self.W3
             self.dzb3 = np.sum(dZ3, axis=0, keepdims=True)
 
             # Hidden Layer 2
             dA2 = dZ3 @ self.W3.T
             # Derivative of ReLU 
             dZ2 = dA2 * np.where(self.Z2 > 0, 1, 0) 
-            self.dzW2 = (self.A1.T @ dZ2)
+            self.dzW2 = (self.A1.T @ dZ2) + l2_reg * self.W2
             self.dzb2 = np.sum(dZ2, axis=0, keepdims=True)
 
             # Hidden Layer 1
             dA1 = dZ2 @ self.W2.T
             # Derivative of ReLU
             dZ1 = dA1 * np.where(self.Z1 > 0, 1, 0) 
-            self.dzW1 = (self.training_data.T @ dZ1)
+            self.dzW1 = (self.training_data.T @ dZ1) + l2_reg * self.W1
             self.dzb1 = np.sum(dZ1, axis=0, keepdims=True)
+            
+            # clip gradients to prevent explosion
+            self.dzW1 = np.clip(self.dzW1, -1.0, 1.0)
+            self.dzW2 = np.clip(self.dzW2, -1.0, 1.0)
+            self.dzW3 = np.clip(self.dzW3, -1.0, 1.0)
+            self.dzb1 = np.clip(self.dzb1, -1.0, 1.0)
+            self.dzb2 = np.clip(self.dzb2, -1.0, 1.0)
+            self.dzb3 = np.clip(self.dzb3, -1.0, 1.0)
 
     def backward_propagation(self,learning_rate):
         self.W1-=self.dzW1*learning_rate
