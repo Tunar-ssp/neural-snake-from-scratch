@@ -167,7 +167,7 @@ These are plotted live in a 2×3 subplot grid.
 - **Gamma**: 0.95 (less emphasis on distant future)
 - **Approach Reward**: 0.2 (small bonus for moving toward food)
 - **Distance Penalty**: -0.1 (small penalty for moving away)
-- **Results**: Avg Score 34.08, Max Score 67 🏆
+- **Results**: Avg Score 34.08, Max Score 73 (11x11)
 
 ### Key Insights
 - Lower gamma (0.95 vs 0.99) learns faster
