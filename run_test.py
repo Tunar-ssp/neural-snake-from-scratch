@@ -135,7 +135,7 @@ def main():
         while True:
             try:
                 delay_input = input("Milliseconds between each move (default 75ms): ").strip()
-                delay_ms = int(delay_input) if delay_input else 500
+                delay_ms = int(delay_input) if delay_input else 75
                 
                 if delay_ms < 10:
                     print("must be at least 10ms")
