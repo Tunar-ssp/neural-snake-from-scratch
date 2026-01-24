@@ -6,7 +6,7 @@ Built a Snake game. Then taught it to play itself with a neural network. No Tens
 
 ## The Journey
 
-Started by creating a Snake game using Pygame, playable by humans.[GitHub Link](https://github.com/Tunar-ssp/Snake-game)
+Started by creating a Snake game using Pygame, playable by humans[GitHub Link](https://github.com/Tunar-ssp/Snake-game).
 Developed a version that allows AI interaction.
 Built a neural network from scratch to control the AI.
 Created naural network from scrath with 17 input features. Then 35. Got ambitious and tried feeding the whole grid map as input. Bumped it to 45 features. Didn't work well. Went back to 35. That was the sweet spot.
